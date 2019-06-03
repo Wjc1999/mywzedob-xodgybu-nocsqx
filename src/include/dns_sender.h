@@ -10,42 +10,40 @@
 #include "my_socket.h"
 #include "dns_packet.h"
 #include "host_list.h"
-#include "my_map.h"
 
 class MyQueue;
 class JobQueue;
+
 class DNSSender
 {
 public:
 	DNSSender() = delete;
-	explicit DNSSender(JobQueue *job_queue, HostList *host_list, MyMap *my_map, const std::string &address);
+	explicit DNSSender(JobQueue *job_queue, HostList *host_list, const std::string &address);
 	DNSSender(const DNSSender *other) = delete;
 	~DNSSender() = default;
 
-	//开始运行
+	// 开始运行
 	void Start();
-	//从工作队列获取一个报文
+	// 从工作队列获取一个报文
 	void set_packet();
 
-	// 供job_queue分配
-	void set_queue(MyQueue *queue) noexcept;
+	void set_queue(MyQueue *data_queue) noexcept { data_queue_ = data_queue; }
 
-	// 响应
 	void Responce();
 
 private:
-	JobQueue *job_queue_ = nullptr;
-	MyQueue *data_queue_ = nullptr; // 从该队列中取出数据并处理发送
-	HostList *host_list_ = nullptr;
+	JobQueue *job_queue_ = nullptr; // 控制器
+	MyQueue *data_queue_ = nullptr; // 工作队列
+	HostList *host_list_ = nullptr; // 对照表
 
 	MySocket sockSend_;
 	MySocket sockQuest_;
 
-	std::string address_; // 上级dns服务器地址
-	MyMap *my_map_ = nullptr;
-	DNSPacket dns_packet_;
+	std::string address_;  // 上级dns服务器地址
+	DNSPacket dns_packet_; // 将数据放到该结构体
 
-	void set_reply(const std::string &ip);
-	void send_to_client();
+	void set_reply_normal(const std::string &ip);
+	void set_reply_banned();
+	void send_to_client() { sockSend_.SendTo(dns_packet_.raw_data); } // 在socket上写入传出数据raw_data
 	void send_to_client(const sockaddr_in &addr);
 };
